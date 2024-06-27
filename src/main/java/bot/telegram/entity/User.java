@@ -17,5 +17,6 @@ public class User {
     private Double balance;
     private State state;
     private Food curruntFood;
+    private String currentMenu;
     private Integer messageId;
 }

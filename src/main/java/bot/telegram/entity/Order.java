@@ -6,6 +6,8 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.apache.commons.lang3.text.StrBuilder;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -20,4 +22,5 @@ public class Order {
     private List<Food> foods = new ArrayList<>();
     private Status status = Status.NEW;
     private Double price;
+    private LocalDateTime changedTime;
 }

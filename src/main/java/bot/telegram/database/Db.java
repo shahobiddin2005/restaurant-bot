@@ -8,6 +8,8 @@ import lombok.Getter;
 
 import java.util.*;
 
+import static bot.telegram.enums.Status.NEW;
+
 public class Db {
 
     private Set<User> users = new HashSet<>();
@@ -46,14 +48,32 @@ public class Db {
     }
 
     public Optional<Food> getFoodFromBasket(String foodName, User user) {
-            for (Food food : userBasket.get(user).getFoods()) {
-                if (food.getName().equals(foodName)) return Optional.of(food);
-            }
+        for (Food food : userBasket.get(user).getFoods()) {
+            if (food.getName().equals(foodName)) return Optional.of(food);
+        }
         return Optional.empty();
     }
 
+    public void foodCheckingAddBasket(Food food, User user) {
+        if (db.isExist(food.getName(), user)) {
+            getFoodFromBasket(food.getName(), user).get().setCount(getFoodFromBasket(food.getName(), user).get().getCount() + food.getCount());
+        } else {
+            if (db.getUserBasket().get(user) == null)
+                db.getUserBasket().put(user, new Order(user, new ArrayList<>(), NEW, 0., null));
+            db.getUserBasket().get(user).getFoods().add(user.getCurruntFood());
+        }
+    }
+
+    public boolean isExist(String foodName, User user) {
+        if (userBasket.get(user) == null)return false;
+        for (Food food : userBasket.get(user).getFoods()) {
+            if (food.getName().equals(foodName)) return true;
+        }
+        return false;
+    }
+
     public Optional<Order> getOrderById(String id) {
-        for (User user: userOrder.keySet()) {
+        for (User user : userOrder.keySet()) {
             for (Order order : userOrder.get(user)) {
                 if (order.getId().equals(id)) return Optional.of(order);
             }

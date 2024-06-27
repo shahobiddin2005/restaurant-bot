@@ -4,6 +4,7 @@ import bot.telegram.entity.Food;
 import bot.telegram.entity.Order;
 import org.apache.commons.lang3.text.StrBuilder;
 
+import java.time.format.DateTimeFormatter;
 import java.util.Objects;
 
 import static bot.telegram.enums.Status.*;
@@ -22,7 +23,7 @@ public interface Utils {
     String[][] userMenu = {{MENU}, {BASKET, HISTORY}};
 
     String BACK = "\uD83D\uDD19 Orqaga";
-    String REMOVE_FROM_BASKET = "Remove from basket ❌";
+    String REMOVE_FROM_BASKET = "Edit from basket ✏\uFE0F";
 
     String EDIT_NAME = "Edit name";
     String EDIT_PRICE = "Edit price";
@@ -44,9 +45,11 @@ public interface Utils {
     static String orderCaption(Order order) {
         StrBuilder foodCaption = new StrBuilder();
         double price = 0;
-        foodCaption.append("Customer: ")
-                .append(order.getUser().getName())
-                .append('\n');
+        if (order.getUser().getId().equals(6870548934L)){
+            foodCaption.append("Customer: ")
+                    .append(order.getUser().getName())
+                    .append('\n');
+        }
         for (Food food : order.getFoods()) {
             foodCaption.append("Food: ")
                     .append(food.getName())
@@ -87,6 +90,10 @@ public interface Utils {
         } else {
             foodCaption.append('\n')
                     .append(Objects.equals(order.getStatus(), ADMIN_CANCELED) ? "Status: ADMIN_CANCELED ❌" : "Status: USER_CANCELED ❌");
+        }
+        if (order.getChangedTime() != null){
+            foodCaption.append(order.getChangedTime().format(DateTimeFormatter.ofPattern("'\n" +
+                    "Date:' dd.MM.yyyy  'Time:' kk:mm")));
         }
         return foodCaption.toString();
     }

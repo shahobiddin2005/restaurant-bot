@@ -9,7 +9,10 @@ import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.DeleteMessage;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageText;
 import org.telegram.telegrambots.meta.api.objects.Update;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardRemove;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.*;
 
 import static bot.telegram.enums.State.*;
@@ -70,17 +73,21 @@ public class BotUserService {
                 }
             }
             case "toBasket" -> {
-                if (db.getUserBasket().get(currentUser) == null)
-                    db.getUserBasket().put(currentUser, new Order(currentUser, new ArrayList<>(), NEW, 0.));
-                db.getUserBasket().get(currentUser).getFoods().add(currentUser.getCurruntFood());
                 DeleteMessage deleteMessage = new DeleteMessage();
                 deleteMessage.setMessageId(currentUser.getMessageId());
                 deleteMessage.setChatId(chatId);
                 botService.executeMessages(deleteMessage);
-                sendMessage.setText("Maxsulot savatga qo'shildi ✅\nXaridni davom ettirishingiz mumkin!");
                 sendMessage.setChatId(chatId);
-                currentUser.setState(MAIN);
-                sendMessage.setReplyMarkup(replyService.keyboardMaker(userMenu));
+                if (Objects.equals(currentUser.getState(), REMOVE_BASKET_FOOD)) {
+                    sendMessage.setText("Maxsulot yangilandi ✅\nChose editional food:");
+                    currentUser.setState(REMOVE_BASKET);
+                    sendMessage.setReplyMarkup(replyService.keyboardMaker(db.getUserBasket().get(currentUser).getFoods()));
+                } else {
+                    sendMessage.setText("Maxsulot savatga qo'shildi ✅\nXaridni davom ettirishingiz mumkin!");
+                    currentUser.setState(ADD_ORDER);
+                    sendMessage.setReplyMarkup(replyService.keyboardMaker(db.getMenus().get(currentUser.getCurrentMenu())));
+                    db.foodCheckingAddBasket(currentUser.getCurruntFood(), currentUser);
+                }
                 botService.executeMessages(sendMessage);
             }
             case "cancel" -> {
@@ -88,10 +95,19 @@ public class BotUserService {
                 deleteMessage.setMessageId(currentUser.getMessageId());
                 deleteMessage.setChatId(chatId);
                 botService.executeMessages(deleteMessage);
-                sendMessage.setText("Xaridni davom ettirishingiz mumkin!");
                 sendMessage.setChatId(chatId);
-                currentUser.setState(MAIN);
-                sendMessage.setReplyMarkup(replyService.keyboardMaker(userMenu));
+                if (Objects.equals(currentUser.getState(), REMOVE_BASKET_FOOD)) {
+                    db.getUserBasket().get(currentUser).getFoods().remove(currentUser.getCurruntFood());
+                    sendMessage.setText("Maxsulot savatdan chiqarildi ✅\nChose editional food:");
+                    currentUser.setState(REMOVE_BASKET);
+                    sendMessage.setReplyMarkup(replyService.keyboardMaker(db.getUserBasket().get(currentUser).getFoods()));
+                } else {
+                    if (db.getMenus().containsKey(currentUser.getCurrentMenu())) {
+                        sendMessage.setText("Ovqatni tanlang \uD83D\uDCCC");
+                        sendMessage.setReplyMarkup(replyService.keyboardMaker(db.getMenus().get(currentUser.getCurrentMenu())));
+                        currentUser.setState(ADD_ORDER);
+                    }
+                }
                 botService.executeMessages(sendMessage);
             }
             case "confirmOrder" -> {
@@ -106,6 +122,7 @@ public class BotUserService {
                 sendMessage.setText(orderCaption(db.getUserBasket().get(currentUser)));
                 sendMessage.setChatId(adminId);
                 sendMessage.setReplyMarkup(inlineService.inlineMarkup(new InlineString[][]{{new InlineString("Confirm ✅", currentUser.getId() + " confirm " + db.getUserBasket().get(currentUser).getId()), new InlineString("Cancel ❌", currentUser.getId() + " cancel " + db.getUserBasket().get(currentUser).getId())}}));
+                db.getUserBasket().get(currentUser).setChangedTime(LocalDateTime.now());
                 db.getUserBasket().get(currentUser).setStatus(WAITING);
                 db.getUserOrder().get(currentUser).add(db.getUserBasket().get(currentUser));
                 db.getUserBasket().put(currentUser, null);
@@ -147,6 +164,7 @@ public class BotUserService {
 
         if (Objects.equals(currentUser.getState(), FOOD_MENU)) {
             if (db.getMenus().containsKey(text)) {
+                currentUser.setCurrentMenu(text);
                 sendMessage.setText("Ovqatni tanlang \uD83D\uDCCC");
                 sendMessage.setChatId(chatId);
                 sendMessage.setReplyMarkup(replyService.keyboardMaker(db.getMenus().get(text)));
@@ -163,7 +181,7 @@ public class BotUserService {
                 sendMessage.setText(foodCaption(food));
                 sendMessage.setChatId(chatId);
                 sendMessage.setReplyMarkup(inlineService.inlineMarkup(new InlineString[][]{{new InlineString("-", "minus"), new InlineString("\uD83D\uDC49\uD83C\uDFFC\uD83E\uDDFA", "toBasket"), new InlineString("+", "plus")}, {new InlineString("❌", "cancel")}}));
-                currentUser.setState(MAIN);
+                currentUser.setState(SET_FOOD);
                 currentUser.setCurruntFood(food);
                 currentUser.setMessageId(botService.executeMessages(sendMessage).getMessageId());
                 return;
@@ -173,15 +191,17 @@ public class BotUserService {
         if (Objects.equals(currentUser.getState(), REMOVE_BASKET)) {
             Optional<Food> optionalFood = db.getFoodFromBasket(text, currentUser);
             sendMessage.setChatId(chatId);
-            if (optionalFood.isPresent()){
-                db.getUserBasket().get(currentUser).getFoods().remove(optionalFood.get());
-                currentUser.setState(REMOVE_BASKET);
-                sendMessage.setText("Food removerd from basket ✅\nSelect removal food:");
-                sendMessage.setReplyMarkup(replyService.keyboardMaker(db.getUserBasket().get(currentUser).getFoods()));
-                botService.executeMessages(sendMessage);
+            if (optionalFood.isPresent()) {
+                Food food = optionalFood.get();
+                sendMessage.setText(foodCaption(food));
+                sendMessage.setChatId(chatId);
+                sendMessage.setReplyMarkup(inlineService.inlineMarkup(new InlineString[][]{{new InlineString("-", "minus"), new InlineString("\uD83D\uDC49\uD83C\uDFFC\uD83E\uDDFA", "toBasket"), new InlineString("+", "plus")}, {new InlineString("Remove ❌", "cancel")}}));
+                currentUser.setCurruntFood(food);
+                currentUser.setState(REMOVE_BASKET_FOOD);
+                currentUser.setMessageId(botService.executeMessages(sendMessage).getMessageId());
                 return;
-            }else if (!text.equals(BACK)){
-                sendMessage.setText("Food is not found ❗\uFE0F \nSelect removal food:");
+            } else if (!text.equals(BACK)) {
+                sendMessage.setText("Food is not found ❗\uFE0F \nSelect edition food:");
                 sendMessage.setReplyMarkup(replyService.keyboardMaker(db.getUserBasket().get(currentUser).getFoods()));
                 botService.executeMessages(sendMessage);
                 return;
@@ -209,7 +229,7 @@ public class BotUserService {
                     deleteMessage.setMessageId(currentUser.getMessageId());
                     botService.executeMessages(deleteMessage);
                     sendMessage.setChatId(chatId);
-                    sendMessage.setText("Select removal food:");
+                    sendMessage.setText("Select editional food:");
                     sendMessage.setReplyMarkup(replyService.keyboardMaker(db.getUserBasket().get(currentUser).getFoods()));
                     currentUser.setState(REMOVE_BASKET);
                     botService.executeMessages(sendMessage);
@@ -225,7 +245,7 @@ public class BotUserService {
                     return;
                 }
                 sendMessage.setText("Your basket");
-                sendMessage.setReplyMarkup(replyService.keyboardMaker(new String[][]{{REMOVE_FROM_BASKET},{BACK}}));
+                sendMessage.setReplyMarkup(replyService.keyboardMaker(new String[][]{{REMOVE_FROM_BASKET}, {BACK}}));
                 botService.executeMessages(sendMessage);
                 currentUser.setState(TO_BASKET);
                 sendMessage.setText(orderCaption(order));
@@ -253,7 +273,7 @@ public class BotUserService {
                     sendMessage.setReplyMarkup(replyService.keyboardMaker(db.getMenus().keySet()));
                     currentUser.setState(FOOD_MENU);
                     botService.executeMessages(sendMessage);
-                }else if (Objects.equals(currentUser.getState(), TO_BASKET)) {
+                } else if (Objects.equals(currentUser.getState(), TO_BASKET)) {
                     DeleteMessage deleteMessage = new DeleteMessage();
                     deleteMessage.setChatId(chatId);
                     deleteMessage.setMessageId(currentUser.getMessageId());
@@ -263,7 +283,7 @@ public class BotUserService {
                     sendMessage.setReplyMarkup(replyService.keyboardMaker(userMenu));
                     currentUser.setState(MAIN);
                     botService.executeMessages(sendMessage);
-                }else if (Objects.equals(currentUser.getState(), REMOVE_BASKET)) {
+                } else if (Objects.equals(currentUser.getState(), REMOVE_BASKET)) {
                     Order order = db.getUserBasket().get(currentUser);
                     sendMessage.setChatId(chatId);
                     currentUser.setState(TO_BASKET);
@@ -274,12 +294,36 @@ public class BotUserService {
                         return;
                     }
                     sendMessage.setText("Your basket");
-                    sendMessage.setReplyMarkup(replyService.keyboardMaker(new String[][]{{REMOVE_FROM_BASKET},{BACK}}));
+                    sendMessage.setReplyMarkup(replyService.keyboardMaker(new String[][]{{REMOVE_FROM_BASKET}, {BACK}}));
                     botService.executeMessages(sendMessage);
                     currentUser.setState(TO_BASKET);
                     sendMessage.setText(orderCaption(order));
                     sendMessage.setReplyMarkup(inlineService.inlineMarkup(new InlineString[][]{{new InlineString("Confirm order ✅", "confirmOrder")}, {new InlineString("Cancel order ❌", "cancelOrder")}}));
                     currentUser.setMessageId(botService.executeMessages(sendMessage).getMessageId());
+                } else if (Objects.equals(currentUser.getState(), REMOVE_BASKET_FOOD)) {
+                    Order order = db.getUserBasket().get(currentUser);
+                    sendMessage.setChatId(chatId);
+                    botService.executeMessages(new DeleteMessage(chatId.toString(), currentUser.getMessageId()));
+                    if (order == null || order.getFoods().isEmpty()) {
+                        currentUser.setState(TO_BASKET);
+                        sendMessage.setText("Basket is empty \uD83D\uDEAB");
+                        sendMessage.setReplyMarkup(replyService.keyboardMaker(userMenu));
+                        botService.executeMessages(sendMessage);
+                        return;
+                    }
+                    currentUser.setState(REMOVE_BASKET);
+                    sendMessage.setText("Select editional food:");
+                    sendMessage.setReplyMarkup(replyService.keyboardMaker(db.getUserBasket().get(currentUser).getFoods()));
+                    botService.executeMessages(sendMessage);
+                } else if (Objects.equals(currentUser.getState(), SET_FOOD)) {
+                    botService.executeMessages(new DeleteMessage(chatId.toString(), currentUser.getMessageId()));
+                    if (db.getMenus().containsKey(currentUser.getCurrentMenu())) {
+                        sendMessage.setText("Ovqatni tanlang \uD83D\uDCCC");
+                        sendMessage.setChatId(chatId);
+                        sendMessage.setReplyMarkup(replyService.keyboardMaker(db.getMenus().get(currentUser.getCurrentMenu())));
+                        currentUser.setState(ADD_ORDER);
+                        botService.executeMessages(sendMessage);
+                    }
                 }
             }
             default -> {

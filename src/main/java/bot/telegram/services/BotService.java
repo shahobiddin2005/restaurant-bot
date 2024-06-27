@@ -43,7 +43,7 @@ public class BotService extends TelegramLongPollingBot {
     @Override
     public String getBotToken() {
 
-        return "bot token";
+        return "7267041813:AAGb5_7OmST5u6_KUKc_MZ8lfQMklshtQS4";
     }
 
 
@@ -55,6 +55,10 @@ public class BotService extends TelegramLongPollingBot {
                 throw new RuntimeException(e);
             }
         }
+    }
+
+    public BotService() {
+        System.out.println("Bot is successfully working...");
     }
 
     private static BotService botService;
