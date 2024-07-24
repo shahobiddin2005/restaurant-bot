@@ -60,6 +60,9 @@ public interface Utils {
         }
         foodCaption.append("Total price: ")
                 .append(price);
+        if (order.getChangedTime() != null){
+            foodCaption.append(order.getChangedTime().format(DateTimeFormatter.ofPattern("'\nDate:' dd.MM.yyyy  'Time:' kk:mm")));
+        }
         return foodCaption.toString();
     }
 
@@ -92,8 +95,7 @@ public interface Utils {
                     .append(Objects.equals(order.getStatus(), ADMIN_CANCELED) ? "Status: ADMIN_CANCELED ❌" : "Status: USER_CANCELED ❌");
         }
         if (order.getChangedTime() != null){
-            foodCaption.append(order.getChangedTime().format(DateTimeFormatter.ofPattern("'\n" +
-                    "Date:' dd.MM.yyyy  'Time:' kk:mm")));
+            foodCaption.append(order.getChangedTime().format(DateTimeFormatter.ofPattern("'\nDate:' dd.MM.yyyy  'Time:' kk:mm")));
         }
         return foodCaption.toString();
     }

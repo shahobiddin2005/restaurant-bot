@@ -15,7 +15,7 @@ import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 public class BotService extends TelegramLongPollingBot {
     private static final BotAdminService adminService = BotAdminService.getInstance();
     private static final BotUserService userService = BotUserService.getInstance();
-    private static final Long adminId = 6870548934L;
+    private static final Long adminId = userService.adminId;
     @SneakyThrows
     @Override
     public void onUpdateReceived(Update update) {
@@ -57,7 +57,7 @@ public class BotService extends TelegramLongPollingBot {
         }
     }
 
-    public BotService() {
+    private BotService() {
         System.out.println("Bot is successfully working...");
     }
 

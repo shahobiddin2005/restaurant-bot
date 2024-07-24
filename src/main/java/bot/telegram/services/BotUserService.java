@@ -27,7 +27,7 @@ public class BotUserService {
     BotService botService = BotService.getInstance();
     private final ReplyMarkupService replyService = new ReplyMarkupService();
     private final InlineMarkupService inlineService = new InlineMarkupService();
-    private final Long adminId = 6870548934L;
+    public final Long adminId = 6870548934L;
 
     public void callbackHandler(Update update) {
         User currentUser;
@@ -53,7 +53,7 @@ public class BotUserService {
                 EditMessageText editMessageText = new EditMessageText();
                 editMessageText.setText(foodCaption(curruntFood));
                 editMessageText.setMessageId(currentUser.getMessageId());
-                editMessageText.setReplyMarkup(inlineService.inlineMarkup(new InlineString[][]{{new InlineString("-", "minus"), new InlineString("\uD83D\uDC49\uD83C\uDFFC\uD83E\uDDFA", "toBasket"), new InlineString("+", "plus")}, {new InlineString("❌", "cancel")}}));
+                editMessageText.setReplyMarkup(inlineService.inlineMarkup(new InlineString[][]{{new InlineString("-", "minus"), new InlineString("\uD83D\uDC49\uD83C\uDFFC\uD83E\uDDFA", "toBasket"), new InlineString("+", "plus")}, {new InlineString("Remove ❌", "cancel")}}));
                 editMessageText.setChatId(chatId);
                 botService.executeMessages(editMessageText);
             }
@@ -65,9 +65,9 @@ public class BotUserService {
                     editMessageText.setText(foodCaption(curruntFood));
                     editMessageText.setMessageId(currentUser.getMessageId());
                     if (curruntFood.getCount() == 0)
-                        editMessageText.setReplyMarkup(inlineService.inlineMarkup(new InlineString[][]{{new InlineString("+", "plus")}, {new InlineString("❌", "cancel")}}));
+                        editMessageText.setReplyMarkup(inlineService.inlineMarkup(new InlineString[][]{{new InlineString("+", "plus")}, {new InlineString("Remove ❌", "cancel")}}));
                     else
-                        editMessageText.setReplyMarkup(inlineService.inlineMarkup(new InlineString[][]{{new InlineString("-", "minus"), new InlineString("\uD83D\uDC49\uD83C\uDFFC\uD83E\uDDFA", "toBasket"), new InlineString("+", "plus")}, {new InlineString("❌", "cancel")}}));
+                        editMessageText.setReplyMarkup(inlineService.inlineMarkup(new InlineString[][]{{new InlineString("-", "minus"), new InlineString("\uD83D\uDC49\uD83C\uDFFC\uD83E\uDDFA", "toBasket"), new InlineString("+", "plus")}, {new InlineString("Remove ❌", "cancel")}}));
                     editMessageText.setChatId(chatId);
                     botService.executeMessages(editMessageText);
                 }
@@ -180,7 +180,7 @@ public class BotUserService {
                 Food food = optionalFood.get().clone();
                 sendMessage.setText(foodCaption(food));
                 sendMessage.setChatId(chatId);
-                sendMessage.setReplyMarkup(inlineService.inlineMarkup(new InlineString[][]{{new InlineString("-", "minus"), new InlineString("\uD83D\uDC49\uD83C\uDFFC\uD83E\uDDFA", "toBasket"), new InlineString("+", "plus")}, {new InlineString("❌", "cancel")}}));
+                sendMessage.setReplyMarkup(inlineService.inlineMarkup(new InlineString[][]{{new InlineString("-", "minus"), new InlineString("\uD83D\uDC49\uD83C\uDFFC\uD83E\uDDFA", "toBasket"), new InlineString("+", "plus")}, {new InlineString("Remove ❌", "cancel")}}));
                 currentUser.setState(SET_FOOD);
                 currentUser.setCurruntFood(food);
                 currentUser.setMessageId(botService.executeMessages(sendMessage).getMessageId());
